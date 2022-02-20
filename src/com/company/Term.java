@@ -51,7 +51,7 @@ public class Term implements Comparable<Term> {
         }
 
         //sets pattern to two groups: coefficient and exponent
-        Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d)");
+        Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d+)");
         matcher = numbers.matcher(term);
         if (!matcher.find()) {
             throw new RuntimeException("Cannot parse string");

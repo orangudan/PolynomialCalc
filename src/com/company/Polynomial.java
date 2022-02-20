@@ -91,15 +91,7 @@ public class Polynomial {
      */
     private void simplify() {
         combineLikeTerms();
-
-        /*
-        for (Term t : termList) {
-            t.simplify();
-        }
-
-         */
-
-        Collections.sort(termList, Collections.reverseOrder());
+        sort();
     }
 
     /**
@@ -124,23 +116,22 @@ public class Polynomial {
     }
 
     /**
+     * Sorts list from greatest to least order
+     */
+    private void sort() {
+        Collections.sort(termList, Collections.reverseOrder());
+    }
+
+    /**
      * Returns a formatted string representing the polynomial
      * @return String representing the polynomial
      */
-    //TODO fix to add separating minus signs
     public String toString() {
         String str = "";
-        for (Term t : termList) {
-            if (str.equals("")) {
-                str+=t.toString();
-            }
-            else if (t.getCoefficient() < 0) {
-                str+="- " + t.toString().substring(1);
-            }
-            else {
-                str+= "+ " + t.toString().substring(1);
-            }
-            str+= " ";
+        Term currentTerm;
+        for (int i = 0; i < termList.size(); i++) {
+            currentTerm = termList.get(i);
+            str += currentTerm.toString().substring(0,1) + ((i > 0) ? "\s" : "") + currentTerm.toString().substring(1) + ((i < termList.size()) ? "\s" : "");
         }
 
         return str;
@@ -168,7 +159,7 @@ public class Polynomial {
         String[] termStrings = compactPoly.split("\\b(?=[-+ \\t])");
 
         //sets pattern to two groups: coefficient and exponent
-        Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d)");
+        Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d+)");
 
         //Need null value to allow for conditional assignment without needing to initialize variables to 0 (which is meaningful)
         Integer coefficient = null;
