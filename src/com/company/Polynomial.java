@@ -105,6 +105,7 @@ public class Polynomial {
                 secondTerm = termList.get(j);
                 if (firstTerm.compareTo(secondTerm) == 0 || firstTerm.getCoefficient() * secondTerm.getCoefficient() == 0) {
                     sumTerm = Term.add(firstTerm, secondTerm);
+                    sumTerm.simplify();
                     termList.add(sumTerm);
                     termList.remove(firstTerm);
                     termList.remove(secondTerm);
