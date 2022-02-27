@@ -3,6 +3,7 @@ package com.company;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,14 +15,14 @@ import java.util.regex.Pattern;
  * @author dsadeghi
  */
 public class Polynomial {
-    private List<Term> termList = new ArrayList<Term>();
+    private List<Term> termList = new LinkedList<>();
 
     /**
      * Creates a Polynomial object by parsing the input string for terms and initializing them to a list
      * @param inputString string that represents a polynomial
      */
     public Polynomial(String inputString) {
-        termList = parseString(inputString);
+        termList = parsePoly(inputString);
         simplify();
     }
 
@@ -37,7 +38,7 @@ public class Polynomial {
      * @param terms a generic list of Terms
      */
     public Polynomial(List<Term> terms) {
-        termList = terms;
+        termList = new ArrayList<>(terms);
         simplify();
     }
 
@@ -55,10 +56,10 @@ public class Polynomial {
     }
     /**
      * Adds input polynomial
-     * @param other polynomial to be added
+     * @param polynomial polynomial to be added
      */
-    public void add(Polynomial other) {
-        for (Term t : other.termList) {
+    public void add(Polynomial polynomial) {
+        for (Term t : polynomial.termList) {
             addTerm(t);
         }
     }
@@ -68,7 +69,7 @@ public class Polynomial {
      * @param input
      */
     public void add(String input) {
-        List<Term> terms = parseString(input);
+        List<Term> terms = parsePoly(input);
 
         for (Term t : terms) {
             addTerm(t);
@@ -90,36 +91,28 @@ public class Polynomial {
      * Always use this after directly making any changes to the list of terms
      */
     private void simplify() {
-        combineLikeTerms();
-        sort();
-    }
-
-    /**
-     * Dedicated procedure for simplify()
-     */
-    private void combineLikeTerms() {
+        //Combines like terms
         Term firstTerm, secondTerm, sumTerm;
         for (int i = 0; i < termList.size(); i++) {
             firstTerm = termList.get(i);
             for (int j = i+1; j < termList.size(); j++) {
                 secondTerm = termList.get(j);
-                if (firstTerm.compareTo(secondTerm) == 0 || firstTerm.getCoefficient() * secondTerm.getCoefficient() == 0) {
+                if (firstTerm.isAddable(secondTerm)) {
+                    //Take the sum of the two terms, append it to the list, and then remove the two terms from the addition
                     sumTerm = Term.add(firstTerm, secondTerm);
                     sumTerm.simplify();
                     termList.add(sumTerm);
                     termList.remove(firstTerm);
                     termList.remove(secondTerm);
+
+                    //Whenever terms are added, resets the nested loop to start over again
                     i = -1;
                     break;
                 }
             }
         }
-    }
 
-    /**
-     * Sorts list from greatest to least order
-     */
-    private void sort() {
+        //Sort terms from greatest to least order
         Collections.sort(termList, Collections.reverseOrder());
     }
 
@@ -141,12 +134,12 @@ public class Polynomial {
     /**
      * Parses a string for terms and returns them as a list of Term objects
      * @see Term
-     * @param polyString the input string that represents the polynomial (ie. 3x^2 + 4x -3)
+     * @param inputString String that represents the polynomial (ie. 3x^2 + 4x -3)
      * @return the list of Term objects parsed
      */
-    private static List parseString(String polyString) {
+    private static List parsePoly(String inputString) {
         //Removes whitespace
-        String compactPoly = polyString.replaceAll("\\s+", "");
+        String compactPoly = inputString.replaceAll("\\s+", "");
         Matcher matcher;
 
         //Checks for illegal characters
@@ -156,49 +149,14 @@ public class Polynomial {
             throw new RuntimeException("Illegal characters in polynomial");
         }
 
-        //Splits the string into terms
+        //Splits the string into substrings containing terms
         String[] termStrings = compactPoly.split("\\b(?=[-+ \\t])");
 
-        //sets pattern to two groups: coefficient and exponent
-        Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d+)");
-
-        //Need null value to allow for conditional assignment without needing to initialize variables to 0 (which is meaningful)
-        Integer coefficient = null;
-        Integer exponent = null;
         List<Term> termsList = new ArrayList<>();
 
-        //term by term, parse for the coefficient and exponent and use them to create a Term object.
-        for (String termStr : termStrings) {
-            matcher = numbers.matcher(termStr);
-            if (!matcher.find()) {
-                throw new RuntimeException("Cannot parse string");
-            }
-            //If the extracted coefficient is just a "+" or empty string (ie. +x or x), coefficient is implicitly 1
-            if (matcher.group(1).equals("+") || matcher.group(1).equals("")) {
-                coefficient = 1;
-            }
-            //If the extracted coefficient is a "-" (ie. -x), coefficient is implicitly -1
-            else if (matcher.group(1).equals("-")) {
-                coefficient = -1;
-            }
-            else {
-                coefficient = Integer.parseInt(matcher.group(1));
-            }
-
-            //If the second match is found, store it as the exponent. If no match is found and there is an "x", exponent is 1
-            //If neither, exponent is 0
-            if (matcher.find()) {
-                exponent = Integer.parseInt(matcher.group(2));
-            }
-            else if (termStr.contains("x")) {
-                exponent = 1;
-            }
-            else {
-                exponent = 0;
-            }
-
-            termsList.add(new Term(coefficient, exponent));
-
+        //Parse each string for Terms and add them to the list
+        for (String s : termStrings) {
+            termsList.add(Term.parseTerm(s));
         }
 
         return termsList;
