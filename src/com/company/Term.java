@@ -47,6 +47,11 @@ public class Term implements Comparable<Term> {
         this(parseTerm(string));
     }
 
+    protected Term clone() {
+        Term clone = new Term(this);
+        return clone;
+    }
+
     /**
      * Parses a string for a term and returns one as a Term object if found
      * @param string The string containing a term
@@ -196,27 +201,41 @@ public class Term implements Comparable<Term> {
 
     /**
      * Compares the (simplified) terms
-     * @param other
+     * @param o
      * @return
      */
-    public boolean equals(Term other) {
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || this.getClass() != o.getClass()) {
+            return false;
+        }
         Term thisTerm = getSimplifiedTerm();
+        Term thatTerm = (Term)o;
+        thatTerm = thatTerm.getSimplifiedTerm();
 
-        Term otherTerm = other.getSimplifiedTerm();
 
-        return (thisTerm.getCoefficient() == otherTerm.getCoefficient()) && (thisTerm.getExponent() == otherTerm.getExponent());
+        return (thisTerm.getCoefficient() == thatTerm.getCoefficient()) && (thisTerm.getExponent() == thatTerm.getExponent());
     }
 
     /**
      * Returns a string of the term in a simplified form. For example, if the exponent is 0, the "x^n" part is omitted.
      * @return
      */
+    @Override
     public String toString() {
         String str = "";
-        if (coefficient >= 0) {
+        if (coefficient == 0) {
+            return str;
+        }
+        if (coefficient > 0) {
             str += "+";
         }
-        str += String.valueOf(coefficient);
+        if (coefficient != 1 && coefficient != -1) {
+            str += String.valueOf(coefficient);
+        }
+        else if (coefficient == -1) {
+            str += "-";
+        }
 
         //If e = 0, skips "x^". (ie. x^0 ->  If e = 1, skips only "^1"
         if (exponent != 0) {
