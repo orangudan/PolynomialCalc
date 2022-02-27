@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 /**
  * Stores the exponent and coefficient for math terms and provides some basic functionality. Only integers are supported.
+ * Zero terms (terms where coefficient = 0) are not simplified until performing operations with them or explicitly calling simplify()
  *
  * @author dsadeghi
  */
@@ -13,9 +14,16 @@ public class Term implements Comparable<Term> {
     private int coefficient;
 
     /**
-     * Constructor
-     * @param coefficient
-     * @param exponent
+     * Constructs a term with coefficient 1 and exponent 1 (basically 'x')
+     */
+    public Term() {
+        this(1,1);
+    }
+
+    /**
+     * Constructs a term with a given coefficient and exponent
+     * @param coefficient The integer coefficient of the term (ie. 4x)
+     * @param exponent The integer exponent of the term (ie. x^3)
      */
     public Term(int coefficient, int exponent) {
         this.coefficient = coefficient;
@@ -23,15 +31,8 @@ public class Term implements Comparable<Term> {
     }
 
     /**
-     * Default Constructor
-     */
-    public Term() {
-        this(1,1);
-    }
-
-    /**
-     * Copy constructor
-     * @param copy
+     * Copies the exponent and coefficient of a given Term
+     * @param copy the Term object to be copied
      */
     public Term(Term copy) {
         this.exponent = copy.exponent;
@@ -39,23 +40,34 @@ public class Term implements Comparable<Term> {
     }
 
     /**
-     * Constructor with parsed string parameter
-     * @param term
+     * Constructs a term by parsing the input string
+     * @param string the string to be parsed
      */
-    public Term(String term) {
+    public Term(String string) {
+        this(parseTerm(string));
+    }
+
+    /**
+     * Parses a string for a term and returns one as a Term object if found
+     * @param string The string containing a term
+     * @return The Term object parsed
+     */
+    public static Term parseTerm(String string) {
         //Checks for illegal characters
         Pattern illegalCharacters = Pattern.compile("[^x\\d+-^]");
-        Matcher matcher = illegalCharacters.matcher(term);
+        Matcher matcher = illegalCharacters.matcher(string);
         if (matcher.find()) {
             throw new RuntimeException("Illegal characters in polynomial");
         }
 
         //sets pattern to two groups: coefficient and exponent
         Pattern numbers = Pattern.compile("(^[+-]?\\d*)|([+-]?\\d+)");
-        matcher = numbers.matcher(term);
+        matcher = numbers.matcher(string);
         if (!matcher.find()) {
             throw new RuntimeException("Cannot parse string");
         }
+
+        int coefficient;
         //If the extracted coefficient is just a "+" or empty string (ie. +x or x), coefficient is implicitly 1
         if (matcher.group(1).equals("+") || matcher.group(1).equals("")) {
             coefficient = 1;
@@ -64,21 +76,25 @@ public class Term implements Comparable<Term> {
         else if (matcher.group(1).equals("-")) {
             coefficient = -1;
         }
+        //otherwise the coefficient is the match
         else {
             coefficient = Integer.parseInt(matcher.group(1));
         }
 
         //If the second match is found, store it as the exponent. If no match is found and there is an "x", exponent is 1
         //If neither, exponent is 0
+        int exponent;
         if (matcher.find()) {
             exponent = Integer.parseInt(matcher.group(2));
         }
-        else if (term.contains("x")) {
+        else if (string.contains("x")) {
             exponent = 1;
         }
         else {
             exponent = 0;
         }
+
+        return new Term(coefficient, exponent);
     }
 
     public int getExponent() {
@@ -96,44 +112,67 @@ public class Term implements Comparable<Term> {
         this.coefficient = coefficient;
     }
 
+    /**
+     * Sets both the coefficient and exponent of the calling Term
+     * @param coefficient The integer coefficient
+     * @param exponent The integer exponent
+     */
     public void setAll(int coefficient, int exponent) {
         this.exponent = exponent;
         this.coefficient = coefficient;
     }
 
     /**
-     * Adds together two (simplified) terms and returns the sum as another term
-     * @param t1 First term added
-     * @param t2 Second term added
-     * @return Term object that represents their sum
+     * The class-wide condition used to check whether two terms can be added together
+     * @param term The term used to check if addition can be performed
+     * @return returns true if they can be added and false if not
      */
-    public static Term add(Term t1, Term t2) {
-        Term term1 = Term.getSimplifiedTerm(t1);
-        Term term2 = Term.getSimplifiedTerm(t2);
-
-        //If exponents dont match and neither are 0
-        if (term1.getExponent() != term2.getExponent()) {
-            if (term1.getCoefficient() != 0 && term2.getCoefficient() != 0) {
-                throw new RuntimeException("Term's don't have matching exponent");
-            }
-        }
-        //This logic works so that if one is a 0 term, then the nonzero exponent gets assigned. If both are 0, then 0 is assigned
-        int exponent = (term1.getExponent() != 0) ? term1.getExponent() : term2.getExponent();
-        int sumCoefficient = term1.getCoefficient() + term2.getCoefficient();
-
-        return new Term(sumCoefficient, exponent);
+    public boolean isAddable(Term term) {
+        return compareTo(term) == 0 || coefficient == 0 || term.coefficient == 0;
     }
 
     /**
-     * Compares the order between two terms. The terms are evaluated as simplified (exponent is 0 if coefficient is 0)
-     * @param otherTerm
-     * @return
+     * Adds the input term to the calling term
+     * @param term
      */
-    public int compareTo(Term otherTerm) {
-        Term thisTermSimplified = Term.getSimplifiedTerm(this);
-        Term otherTermSimplified = Term.getSimplifiedTerm(otherTerm);
+    public void add(Term term) {
+        //if the exponents are different and neither have a 0 coefficient, throw exception
+        if (!isAddable(term)) {
+            throw new RuntimeException("Terms can't be added");
+        }
+        //In the condition you are adding, for example, 0x^3 + 5x^2, the result should have the exponent of the nonzero term
+        if (coefficient == 0 && term.coefficient != 0) {
+            exponent = term.exponent;
+        }
 
-        return thisTermSimplified.exponent - otherTermSimplified.exponent;
+        coefficient += term.coefficient;
+    }
+
+    /**
+     * Returns the sum of the two input terms
+     * @param firstTerm First term added
+     * @param secondTerm Second term added
+     * @return Term object that represents their sum
+     */
+    public static Term add(Term firstTerm, Term secondTerm) {
+        //Deep copy first term, add second term to it, then return that sum
+        Term sumTerm = new Term(firstTerm);
+        sumTerm.add(secondTerm);
+        return sumTerm;
+    }
+
+    /**
+     * Compares the order between two terms (as simplified)
+     * @param term the Term to be compared
+     * @return The difference between their order
+     */
+    public int compareTo(Term term) {
+        //Because exponent of Terms are mutable without conditions, you can have 0 terms with nonzero exponents (ie. 0x^3)
+        //Comparison between such terms should still be considered "equal" in order in this comparison logic
+        Term thisTermSimplified = getSimplifiedTerm();
+        Term thatTermSimplified = term.getSimplifiedTerm();
+
+        return thisTermSimplified.exponent - thatTermSimplified.exponent;
     }
 
     /**
@@ -146,15 +185,13 @@ public class Term implements Comparable<Term> {
     }
 
     /**
-     * Returns a simplified term based on the input term
-     * @param term The term to be simplified
+     * Returns a simplified term of the calling Term (Does not change state)
      * @return The simplified term
      */
-    public static Term getSimplifiedTerm(Term term) {
-        int coefficient = term.coefficient;
-        int exponent = (coefficient == 0) ? 0 : term.exponent;
-
-        return new Term(coefficient, exponent);
+    public Term getSimplifiedTerm() {
+        Term simplifiedTerm = new Term(this);
+        simplifiedTerm.simplify();
+        return simplifiedTerm;
     }
 
     /**
@@ -163,22 +200,11 @@ public class Term implements Comparable<Term> {
      * @return
      */
     public boolean equals(Term other) {
-        Term thisTerm = Term.getSimplifiedTerm(this);
+        Term thisTerm = getSimplifiedTerm();
 
-        Term otherTerm = Term.getSimplifiedTerm(other);
+        Term otherTerm = other.getSimplifiedTerm();
 
         return (thisTerm.getCoefficient() == otherTerm.getCoefficient()) && (thisTerm.getExponent() == otherTerm.getExponent());
-    }
-
-    /**
-     * Adds the coefficient of the input term if it has the same order
-     * @param other
-     */
-    public void add(Term other) {
-        if (this.exponent != other.exponent) {
-            throw new RuntimeException("Can't add terms with different order");
-        }
-        coefficient += other.coefficient;
     }
 
     /**
@@ -192,11 +218,6 @@ public class Term implements Comparable<Term> {
         }
         str += String.valueOf(coefficient);
 
-        /*
-        if (coefficient != 1 || coefficient != -1 || exponent == 0) {
-            str = String.valueOf(coefficient);
-        }
-         */
         //If e = 0, skips "x^". (ie. x^0 ->  If e = 1, skips only "^1"
         if (exponent != 0) {
             str += "x";
