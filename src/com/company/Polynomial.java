@@ -30,7 +30,6 @@ public class Polynomial {
      * Default Constructor for Polynomial "0"
      */
     public Polynomial() {
-        termList.add(new Term(0,0));
     }
 
     /**
@@ -40,6 +39,13 @@ public class Polynomial {
     public Polynomial(List<Term> terms) {
         termList = new ArrayList<>(terms);
         simplify();
+    }
+
+    public Polynomial(Polynomial copy) {
+        termList = new ArrayList<>();
+        for (Term t : copy.termList) {
+            termList.add(t.clone());
+        }
     }
 
     /**
@@ -81,9 +87,21 @@ public class Polynomial {
      * Adds a term to the list (or sums it with any existing like terms)
      * @param inputTerm
      */
-    private void addTerm(Term inputTerm) {
+    public void addTerm(Term inputTerm) {
         termList.add(inputTerm);
         simplify();
+    }
+
+    public int getNumTerms() {
+        return termList.size();
+    }
+
+    public Term getTerm(int index) {
+        return termList.get(index);
+    }
+
+    public void clear() {
+        termList = new ArrayList<>();
     }
 
     /**
@@ -121,9 +139,21 @@ public class Polynomial {
      * @return String representing the polynomial
      */
     public String toString() {
+        if (termList.size() == 0) {
+            return "0";
+        }
         String str = "";
         Term currentTerm;
-        for (int i = 0; i < termList.size(); i++) {
+
+        //First term print logic
+        //If first term is negative, include the negative sign. If positive, exclude the positive sign
+        if (termList.get(0).getCoefficient() < 0) {
+            str += termList.get(0).toString();
+        } else {
+            str += termList.get(0).toString().substring(1);
+        }
+        for (int i = 1; i < termList.size(); i++) {
+            str += "\s";
             currentTerm = termList.get(i);
             str += currentTerm.toString().substring(0,1) + ((i > 0) ? "\s" : "") + currentTerm.toString().substring(1) + ((i < termList.size()) ? "\s" : "");
         }
